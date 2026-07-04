@@ -1,0 +1,52 @@
+# Team usage: `docker compose up` starts both Postgres and the API.
+# Any teammate can run this without installing Postgres locally.
+#
+# API docs (test endpoints without writing frontend code): http://localhost:8000/docs
+# Postgres is exposed on localhost:5432 in case you want to connect with
+# a GUI tool (TablePlus, DBeaver, pgAdmin) to inspect data during dev.
+
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: pollution_tracker
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  api:
+    build: .
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgresql+psycopg://postgres:postgres@db:5432/pollution_tracker
+      # This line is redundant with env_file below IF your .env has
+      # GEMINI_API_KEY set — env_file already injects it directly.
+      # Kept as a fallback so `GEMINI_API_KEY=xxx docker compose up`
+      # (exported in your shell, no .env file at all) also works.
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+    ports:
+      - "8000:8000"
+    volumes:
+      # Mounting the source so --reload picks up code changes live —
+      # you don't need to rebuild the image every time you edit a file.
+      - ./app:/app/app
+      - uploads_data:/app/uploads
+    depends_on:
+      db:
+        condition: service_healthy
+    env_file:
+      - path: .env
+        required: false
+
+volumes:
+  postgres_data:
+  uploads_data:

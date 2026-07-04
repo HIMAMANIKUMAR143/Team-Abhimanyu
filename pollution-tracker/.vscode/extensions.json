@@ -1,0 +1,13 @@
+{
+  // When any teammate opens this folder in VS Code, it'll prompt them
+  // to install these. Click "Install All" and you're set — no need to
+  // hunt down which extensions the project needs.
+  "recommendations": [
+    "ms-python.python",
+    "ms-python.debugpy",
+    "ms-python.black-formatter",
+    "ms-azuretools.vscode-docker",
+    "humao.rest-client",
+    "eamodio.gitlens"
+  ]
+}

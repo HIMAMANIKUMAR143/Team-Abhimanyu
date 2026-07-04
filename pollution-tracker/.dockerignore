@@ -1,0 +1,14 @@
+# Without this, `COPY . .` in the Dockerfile copies these into the image,
+# bloating build time and image size for no benefit — venv/ alone is
+# often 100+ MB of packages that get reinstalled inside the container anyway.
+
+venv/
+__pycache__/
+*.pyc
+.env
+.git/
+.gitignore
+uploads/
+*.db
+.pytest_cache/
+.vscode/

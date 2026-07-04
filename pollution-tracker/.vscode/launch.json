@@ -1,0 +1,39 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      // Click the Run/Debug icon on this config, then set a breakpoint
+      // anywhere in your route handlers (e.g. in app/routers/reports.py)
+      // by clicking left of the line number. When a request hits that
+      // line, execution pauses and you can inspect variables — this is
+      // much faster than adding print() statements and restarting.
+      "name": "Debug FastAPI (uvicorn)",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "uvicorn",
+      "args": [
+        "app.main:app",
+        "--host", "0.0.0.0",
+        "--port", "8000",
+        "--reload"
+      ],
+      "jinja": true,
+      "justMyCode": true,
+      "envFile": "${workspaceFolder}/.env",
+      "console": "integratedTerminal"
+    },
+    {
+      // Runs the currently-open test file under the debugger. Useful
+      // when a test fails and you want to step through why, rather than
+      // just reading the assertion error.
+      "name": "Debug Current Test File",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "pytest",
+      "args": ["${file}", "-v"],
+      "justMyCode": true,
+      "envFile": "${workspaceFolder}/.env",
+      "console": "integratedTerminal"
+    }
+  ]
+}

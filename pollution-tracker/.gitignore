@@ -1,0 +1,19 @@
+# Secrets — NEVER commit this. It's where GEMINI_API_KEY lives once you have one.
+.env
+
+# Python
+venv/
+__pycache__/
+*.pyc
+*.egg-info/
+.pytest_cache/
+
+# Uploaded photos (local dev artifacts, not source code)
+uploads/
+
+# Editor
+.vscode/settings.json
+.idea/
+
+# OS
+.DS_Store

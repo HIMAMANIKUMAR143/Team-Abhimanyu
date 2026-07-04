@@ -1,0 +1,98 @@
+### Pollution Tracker API — manual test requests
+### Requires the "REST Client" VS Code extension (recommended in .vscode/extensions.json)
+### Click "Send Request" above any request below to run it — no curl, no Postman needed.
+### Make sure the API is running first: docker compose up (or uvicorn locally)
+
+@baseUrl = http://localhost:8000
+
+### Health check — confirms the API is up
+GET {{baseUrl}}/health
+
+### Root — shows whether Gemini is in MOCK or LIVE mode
+GET {{baseUrl}}/
+
+### ---------------------------------------------------------------
+### CORE LOOP: upload -> classify -> cluster -> score
+### ---------------------------------------------------------------
+
+### Create a report (citizen upload). Multipart form with a real photo.
+### NOTE: REST Client needs an actual file on disk — update the path below
+### to point at a real image file on your machine before sending this.
+POST {{baseUrl}}/api/reports
+Content-Type: multipart/form-data; boundary=boundary123
+
+--boundary123
+Content-Disposition: form-data; name="latitude"
+
+17.385044
+--boundary123
+Content-Disposition: form-data; name="longitude"
+
+78.486671
+--boundary123
+Content-Disposition: form-data; name="description"
+
+Garbage pile near main road, test via REST Client
+--boundary123
+Content-Disposition: form-data; name="photo"; filename="test.jpg"
+Content-Type: image/jpeg
+
+< ./test-assets/sample-photo.jpg
+--boundary123--
+
+### List all clusters, ranked by severity (this is what the dashboard should call)
+GET {{baseUrl}}/api/reports/clusters
+
+### Filter clusters by status
+GET {{baseUrl}}/api/reports/clusters?status=pending
+
+### Get a single cluster by ID — replace {{clusterId}} with a real ID from the list above
+@clusterId = REPLACE_WITH_REAL_CLUSTER_ID
+GET {{baseUrl}}/api/reports/clusters/{{clusterId}}
+
+### Get all individual reports that make up a cluster
+GET {{baseUrl}}/api/reports/clusters/{{clusterId}}/reports
+
+### Update a cluster's status (Pending -> Assigned -> Resolved)
+PATCH {{baseUrl}}/api/reports/clusters/{{clusterId}}/status
+Content-Type: application/json
+
+{
+  "status": "assigned"
+}
+
+### ---------------------------------------------------------------
+### BEFORE/AFTER VERIFICATION (Day 3 differentiator feature)
+### ---------------------------------------------------------------
+
+### Submit an "after" photo to verify a cluster is resolved
+POST {{baseUrl}}/api/verification/clusters/{{clusterId}}/verify
+Content-Type: multipart/form-data; boundary=boundary456
+
+--boundary456
+Content-Disposition: form-data; name="after_photo"; filename="after.jpg"
+Content-Type: image/jpeg
+
+< ./test-assets/sample-photo-after.jpg
+--boundary456--
+
+### ---------------------------------------------------------------
+### VALIDATION / ERROR CASES — useful for confirming things fail correctly
+### ---------------------------------------------------------------
+
+### Should return 422: latitude out of range
+POST {{baseUrl}}/api/reports
+Content-Type: multipart/form-data; boundary=boundary789
+
+--boundary789
+Content-Disposition: form-data; name="latitude"
+
+200
+--boundary789
+Content-Disposition: form-data; name="longitude"
+
+78.5
+--boundary789--
+
+### Should return 404: cluster doesn't exist
+GET {{baseUrl}}/api/reports/clusters/00000000-0000-0000-0000-000000000000
