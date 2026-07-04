@@ -20,7 +20,7 @@ class Settings(BaseSettings):
     # --- Gemini (image classification) ---
     # Leave blank to run in MOCK mode. When your key is ready, put it in
     # .env as GEMINI_API_KEY=... and restart the app. No code changes needed.
-    GEMINI_API_KEY: str = ""
+    GEMINI_API_KEY: str = "AIzaSyDOkWQJ0Gfx2qVYqJjbjv_C8hkdO8_weVY"
     GEMINI_MODEL: str = "gemini-2.0-flash"
 
     # --- App behavior ---
