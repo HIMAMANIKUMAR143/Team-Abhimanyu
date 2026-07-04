@@ -1,7 +1,6 @@
 ### Pollution Tracker API — manual test requests
 ### Requires the "REST Client" VS Code extension (recommended in .vscode/extensions.json)
-### Click "Send Request" above any request below to run it — no curl, no Postman needed.
-### Make sure the API is running first: docker compose up (or uvicorn locally)
+### Click "Send Request" above any request below to run it.
 
 @baseUrl = http://localhost:8000
 
@@ -15,9 +14,9 @@ GET {{baseUrl}}/
 ### CORE LOOP: upload -> classify -> cluster -> score
 ### ---------------------------------------------------------------
 
-### Create a report (citizen upload). Multipart form with a real photo.
-### NOTE: REST Client needs an actual file on disk — update the path below
-### to point at a real image file on your machine before sending this.
+### Create a report (citizen upload). 
+### The # @name tag allows us to grab the response variables later!
+# @name createReport
 POST {{baseUrl}}/api/reports
 Content-Type: multipart/form-data; boundary=boundary123
 
@@ -40,17 +39,21 @@ Content-Type: image/jpeg
 < ./test-assets/sample-photo.jpg
 --boundary123--
 
+
+### Automatically grab the cluster_id from the creation step above
+@clusterId = {{createReport.response.body.cluster_id}}
+
+
 ### List all clusters, ranked by severity (this is what the dashboard should call)
 GET {{baseUrl}}/api/reports/clusters
 
 ### Filter clusters by status
 GET {{baseUrl}}/api/reports/clusters?status=pending
 
-### Get a single cluster by ID — replace {{clusterId}} with a real ID from the list above
-@clusterId = REPLACE_WITH_REAL_CLUSTER_ID
+### Get a single cluster by ID (Uses dynamic variable)
 GET {{baseUrl}}/api/reports/clusters/{{clusterId}}
 
-### Get all individual reports that make up a cluster
+### Get all individual reports that make up a cluster (Uses dynamic variable)
 GET {{baseUrl}}/api/reports/clusters/{{clusterId}}/reports
 
 ### Update a cluster's status (Pending -> Assigned -> Resolved)
@@ -92,6 +95,11 @@ Content-Disposition: form-data; name="latitude"
 Content-Disposition: form-data; name="longitude"
 
 78.5
+--boundary789
+Content-Disposition: form-data; name="photo"; filename="test.jpg"
+Content-Type: image/jpeg
+
+< ./test-assets/sample-photo.jpg
 --boundary789--
 
 ### Should return 404: cluster doesn't exist
