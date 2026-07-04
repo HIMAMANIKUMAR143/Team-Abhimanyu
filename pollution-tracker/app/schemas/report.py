@@ -1,13 +1,6 @@
-"""
-Pydantic schemas — these define the exact JSON shape going in and out of
-every endpoint. This IS the API contract. If frontend and backend both
-build against this file, they won't drift apart.
-
-Naming convention: `XCreate` for what the client sends to create X,
-`XOut` for what the server sends back, `XUpdate` for partial updates.
-"""
 from datetime import datetime
 from typing import Optional
+from uuid import UUID
 
 from pydantic import BaseModel, Field, ConfigDict
 
@@ -30,15 +23,15 @@ class ReportCreate(BaseModel):
 class ReportOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
-    id: str
-    cluster_id: str
+    id: UUID
+    cluster_id: UUID
     photo_path: str
-    after_photo_path: Optional[str]
+    after_photo_path: Optional[str] = None
     latitude: float
     longitude: float
-    description: Optional[str]
+    description: Optional[str] = None
     category: IssueCategory
-    ai_confidence: Optional[float]
+    ai_confidence: Optional[float] = None
     is_duplicate_of_cluster: bool
     created_at: datetime
 
@@ -48,16 +41,16 @@ class ReportOut(BaseModel):
 class ClusterOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
-    id: str
+    id: UUID
     latitude: float
     longitude: float
     category: IssueCategory
     severity_score: int
     status: ReportStatus
-    assigned_department: Optional[str]
+    assigned_department: Optional[str] = None
     verification_status: VerificationStatus
-    verification_confidence: Optional[float]
-    municipal_summary: Optional[str]
+    verification_confidence: Optional[float] = None
+    municipal_summary: Optional[str] = None
     report_count: int
     created_at: datetime
     updated_at: datetime
