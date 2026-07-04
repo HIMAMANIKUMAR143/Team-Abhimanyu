@@ -1,16 +1,5 @@
-"""
-Severity scoring. Kept to a small number of explainable variables on
-purpose: base severity by issue type, plus a bonus if 3+ reports confirm
-the same cluster. This is meant to be describable in one sentence during
-judge Q&A: "issue type score, plus 10 if 3+ reports confirm it."
-
-A sensitive-zone bonus (school/hospital proximity) is scaffolded but
-disabled by default since it needs a zones dataset you may not have yet —
-see the TODO below.
-"""
 from app.core.config import settings
 from app.models.report import Cluster, IssueCategory
-
 
 def compute_severity(cluster: Cluster) -> int:
     """
@@ -18,19 +7,35 @@ def compute_severity(cluster: Cluster) -> int:
     it — caller is responsible for assigning it to cluster.severity_score
     and committing.
     """
-    base = settings.SEVERITY_BASE_WEIGHTS.get(cluster.category.value, 25)
-
+    # Safely handle both Enum objects and raw strings depending on DB dialect
+    category_val = (
+        cluster.category.value 
+        if hasattr(cluster.category, "value") 
+        else cluster.category
+    )
+    
+    base = settings.SEVERITY_BASE_WEIGHTS.get(category_val, 25)
     score = base
 
-    if cluster.report_count >= settings.SEVERITY_DUPLICATE_THRESHOLD:
+    # Safely extract the count. If report_count isn't a defined column property,
+    # safely fall back to the length of the reports list (if loaded).
+    report_count = getattr(cluster, "report_count", None)
+    if report_count is None:
+        report_count = len(cluster.reports) if getattr(cluster, "reports", None) else 0
+
+    if report_count >= settings.SEVERITY_DUPLICATE_THRESHOLD:
         score += settings.SEVERITY_DUPLICATE_BONUS
 
     # TODO (Tier 2, only if Day 3 checkpoint is solid): sensitive-zone bonus.
     # Needs a dataset of school/hospital coordinates for your target city.
     # Once you have one, check distance from cluster.latitude/longitude to
     # the nearest sensitive zone and add settings.SEVERITY_SENSITIVE_ZONE_BONUS
-    # if within e.g. 200m. Uses the same _haversine_meters helper from
-    # clustering.py — don't duplicate that function, import it.
+    # if within e.g. 200m. 
+    # 
+    # Implementation hint:
+    # from app.services.clustering import _haversine_meters
+    # if any(_haversine_meters(cluster.latitude, cluster.longitude, z.lat, z.lon) <= 200 for z in sensitive_zones):
+    #     score += settings.SEVERITY_SENSITIVE_ZONE_BONUS
 
     return min(score, 100)  # cap at 100 so the dashboard sort/display stays sane
 
@@ -47,4 +52,5 @@ _DEPARTMENT_ROUTING = {
 
 
 def route_department(category: IssueCategory) -> str:
+    """Returns the assigned department for a given issue category."""
     return _DEPARTMENT_ROUTING.get(category, "General Municipal Office")
