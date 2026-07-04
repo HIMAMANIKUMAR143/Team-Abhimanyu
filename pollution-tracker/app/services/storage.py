@@ -1,14 +1,12 @@
-"""
-Photo storage. Saves to local disk under /app/uploads (mounted as a
-Docker volume so photos survive container restarts). This is intentionally
-simple for hackathon scope — if you needed cloud storage (S3 etc.) later,
-this is the only file you'd change.
-"""
 import uuid
+import logging
 from pathlib import Path
 
+logger = logging.getLogger(__name__)
+
+# Ensure uploads directory exists on startup
 UPLOAD_DIR = Path("uploads")
-UPLOAD_DIR.mkdir(exist_ok=True)
+UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 
 
 def save_photo(file_bytes: bytes, original_filename: str) -> str:
@@ -19,23 +17,52 @@ def save_photo(file_bytes: bytes, original_filename: str) -> str:
     extension = Path(original_filename).suffix or ".jpg"
     unique_name = f"{uuid.uuid4()}{extension}"
     destination = UPLOAD_DIR / unique_name
+    
     destination.write_bytes(file_bytes)
-    return str(destination)
+    
+    # Return posix path (forward slashes) so DB paths are consistent 
+    # regardless of the host OS developing the app
+    return destination.as_posix()
+
+
+def _ensure_safe_path(photo_path: str) -> Path:
+    """
+    Internal helper to prevent Path Traversal attacks.
+    Ensures the requested path is actually inside the UPLOAD_DIR.
+    """
+    target_path = Path(photo_path).resolve()
+    base_path = UPLOAD_DIR.resolve()
+    
+    if not target_path.is_relative_to(base_path):
+        logger.error("Security warning: Attempted path traversal -> %s", photo_path)
+        raise ValueError("Invalid file path requested.")
+        
+    return target_path
 
 
 def read_photo(photo_path: str) -> bytes:
     """
     Reads a previously-saved photo back off disk.
-
-    Raises FileNotFoundError with a clear message (rather than letting
-    Path.read_bytes() throw its own less-obvious version of the same
-    error) if the file is missing — e.g. the DB row survived a
-    `docker compose down -v` that wiped the uploads volume, or the path
-    stored on the report was ever wrong. Callers that hit this from a
-    request (see routers/verification.py) should catch it and return a
-    clean 404/409 instead of letting FastAPI turn it into a raw 500.
+    Includes path traversal protection.
     """
-    path = Path(photo_path)
-    if not path.exists():
+    path = _ensure_safe_path(photo_path)
+    
+    if not path.exists() or not path.is_file():
         raise FileNotFoundError(f"Photo not found on disk: {photo_path}")
+        
     return path.read_bytes()
+
+
+def delete_photo(photo_path: str) -> None:
+    """
+    Deletes a photo from disk. Used for cleanup if a downstream service 
+    (like AI classification) fails after the image is saved.
+    """
+    try:
+        path = _ensure_safe_path(photo_path)
+        if path.exists() and path.is_file():
+            path.unlink()
+            logger.info("Deleted orphaned photo at %s", photo_path)
+    except Exception as e:
+        # We don't want cleanup failures to crash the main application thread
+        logger.warning("Failed to delete photo at %s: %s", photo_path, str(e))
